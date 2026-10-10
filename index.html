@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Freedom Calculator</title>
+<style>
+  :root{
+    --ground:#FFFFFF; --surface:#FFFFFF; --surface-2:#F4F6F5; --ink:#121A16;
+    --muted:#55635C; --line:#DCE3DF; --green:#17C05B; --green-deep:#10A34B;
+    --green-soft:#17C05B16; --on-green:#FFFFFF; --red:#E0243B;
+    --shadow:0 1px 2px #121a1610, 0 6px 18px -10px #121a1626;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0A120E; --surface:#121C17; --surface-2:#18241E; --ink:#EAF2EE;
+      --muted:#93A69C; --line:#22332B; --green:#19C862; --green-deep:#13A853;
+      --green-soft:#19C86222; --on-green:#04140A; --red:#FF5A6E;
+      --shadow:0 1px 2px #0007, 0 10px 26px -14px #000a;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0A120E; --surface:#121C17; --surface-2:#18241E; --ink:#EAF2EE;
+    --muted:#93A69C; --line:#22332B; --green:#19C862; --green-deep:#13A853;
+    --green-soft:#19C86222; --on-green:#04140A; --red:#FF5A6E;
+    --shadow:0 1px 2px #0007, 0 10px 26px -14px #000a;
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{
+    margin:0;
+    background:var(--ground);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.45;
+    padding-inline:16px;padding-block:6px 28px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:9px}
+
+  header{text-align:center;margin-bottom:1px}
+  h1{margin:0;font-weight:800;letter-spacing:-.025em;line-height:1.15;font-size:clamp(18px,4.9vw,32px);white-space:nowrap}
+  .sub{margin:1px 0 0;font-size:clamp(12px,3vw,15px);font-weight:700;color:var(--muted)}
+
+  /* ---------- the three green steps ---------- */
+  .band{background:var(--green);color:var(--on-green);border-radius:14px;padding:12px 14px}
+  .bandhead{display:flex;align-items:center;gap:9px;min-width:0}
+  .steptag{
+    display:inline-flex;align-items:center;gap:6px;flex:none;color:var(--on-green);opacity:.92;
+    font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;
+  }
+  .steptag .n{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--on-green);font-size:10.5px;line-height:1}
+  .steptag .n b{color:var(--green);font-weight:800}
+  .htitle{
+    margin:0;font-size:clamp(16px,4.2vw,23px);font-weight:800;letter-spacing:-.02em;line-height:1.15;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;
+  }
+  .wide{display:inline}
+  .narrow{display:none}
+  @media (max-width:640px){.wide{display:none}.narrow{display:inline}}
+
+  .toggle{
+    appearance:none;cursor:pointer;border:0;background:#ffffff2e;color:var(--on-green);
+    font-family:inherit;font-size:19px;font-weight:800;line-height:1;width:28px;height:28px;flex:none;
+    display:grid;place-items:center;border-radius:8px;
+  }
+  .toggle:hover{background:#ffffff4a}
+  .toggle:focus-visible{outline:3px solid #fff;outline-offset:1px}
+  .toggle[aria-expanded="false"] .m{display:none}
+  .toggle[aria-expanded="true"] .p{display:none}
+
+  .bandbody{padding-top:10px}
+  .desc{margin:0;font-size:clamp(13.5px,3.4vw,16px);font-weight:700;line-height:1.35}
+  .desc strong{font-weight:800}
+
+  .rule{height:1px;background:#ffffff40;border:0;margin:11px 0 0}
+  .bandout{padding-top:11px}
+  .outrow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+  .outrow .lead{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.88}
+  .outrow .num{font-size:clamp(26px,6.6vw,40px);font-weight:800;letter-spacing:-.025em;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .extras{margin:7px 0 0;font-size:12.5px;font-weight:700;opacity:.92;text-align:center}
+
+  /* step 1 target control */
+  .target{display:flex;flex-direction:column;align-items:center;gap:7px}
+  .callout{
+    display:inline-flex;align-items:center;gap:6px;background:var(--red);color:#fff;border-radius:999px;padding:5px 14px;
+    font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;
+    box-shadow:0 2px 10px #00000030;animation:pulse 1.5s ease-in-out infinite;
+  }
+  .callout .arrow{width:11px;height:11px;display:inline-block;animation:nudge 1.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  @keyframes nudge{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+  select.big{
+    font-size:clamp(23px,5.4vw,30px);font-weight:800;letter-spacing:-.02em;padding:11px 44px 11px 20px;
+    background-color:var(--surface);border-color:var(--surface);border-radius:13px;
+    box-shadow:0 2px 12px #00000033;min-width:210px;width:auto;
+  }
+
+  /* controls inside green bodies */
+  .flabel{font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:6px;margin:0 0 6px;color:var(--on-green)}
+  .note{margin:10px 0 0;font-size:13px;font-weight:600;line-height:1.4;opacity:.95}
+  .note strong{font-weight:800}
+
+  select{
+    appearance:none;width:100%;
+    background:var(--surface) url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2355635C' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E") no-repeat right 13px center/12px 8px;
+    border:2px solid var(--surface);border-radius:11px;color:var(--ink);
+    font-family:inherit;font-size:15px;font-weight:800;padding:11px 36px 11px 12px;cursor:pointer;
+  }
+  select:focus{outline:3px solid #ffffff9c;outline-offset:1px}
+
+  .counter{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .counter button{
+    appearance:none;cursor:pointer;border:0;border-radius:11px;background:var(--surface);color:var(--ink);
+    width:46px;height:46px;font-size:26px;font-weight:800;line-height:1;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .counter button:hover{background:var(--surface-2)}
+  .counter button:focus-visible{outline:3px solid #fff;outline-offset:1px}
+  .counter .val{
+    min-width:72px;text-align:center;font-size:25px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+    border-radius:11px;padding:9px 6px;background:var(--surface);color:var(--ink);flex:none;
+  }
+  .counter .cap{font-size:13px;font-weight:700;opacity:.92;line-height:1.25;min-width:0}
+
+  /* ---------- white collapsibles ---------- */
+  details{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow)}
+  summary{cursor:pointer;padding:12px 15px;list-style:none;font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+  summary::-webkit-details-marker{display:none}
+  summary .chev{margin-left:auto;color:var(--green-deep);font-size:19px;font-weight:800;line-height:1}
+  details[open] summary .chev{transform:rotate(45deg)}
+  summary:focus-visible{outline:3px solid var(--green);outline-offset:-3px}
+  .body{padding:13px 15px 16px;border-top:1px solid var(--line)}
+  .adv-body{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:620px){.adv-body{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:7px;min-width:0}
+  .field .flabel{margin:0;color:var(--ink)}
+  .hint{margin:0;font-size:13.5px;font-weight:600;color:var(--muted);line-height:1.4}
+  .body select{background-color:var(--surface-2);border-color:var(--line)}
+  .body select:focus{outline:none;border-color:var(--green)}
+
+  .costrow{display:flex;align-items:center;gap:8px}
+  .costrow + .costrow{margin-top:7px}
+  .costrow input[type=text]{flex:1;min-width:0;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:14px;font-weight:600}
+  .costrow input[type=number]{width:96px;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:14.5px;font-weight:800;text-align:right}
+  .costrow input:focus{outline:none;border-color:var(--green)}
+  .costtotal{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+  .costtotal .sum{font-size:20px;font-weight:800;color:var(--green-deep)}
+  .money{display:flex;align-items:center;border:2px solid var(--line);border-radius:11px;background:var(--surface-2)}
+  .money span{padding:0 2px 0 13px;font-size:17px;font-weight:800;color:var(--muted)}
+  .money input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-family:inherit;font-size:17px;font-weight:800;padding:12px 13px 12px 4px;font-variant-numeric:tabular-nums}
+  .money input:focus{outline:none}
+  input[type=range]{width:100%;accent-color:var(--green);height:22px}
+  .btn{appearance:none;border:0;background:var(--green);color:var(--on-green);cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:800;padding:11px 17px;border-radius:10px}
+  .btn:hover{background:var(--green-deep)}
+  .btn:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .btn.ghost{background:var(--surface-2);color:var(--ink);border:2px solid var(--line)}
+  .btn[disabled]{opacity:.6;cursor:default}
+
+  /* ---------- the plan: email gate and thank-you ---------- */
+  .plan{border:2px solid var(--green);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);padding:16px 15px 17px;display:flex;flex-direction:column;gap:11px}
+  .plan h2{margin:0;font-size:clamp(17px,4.2vw,22px);font-weight:800;letter-spacing:-.02em;line-height:1.2;text-wrap:balance}
+  .plan p{margin:0}
+  .planform{display:flex;flex-direction:column;gap:11px}
+  .planfields{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  @media (max-width:620px){.planfields{grid-template-columns:1fr}}
+  .plan input[type=text],.plan input[type=email]{
+    width:100%;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:11px;
+    padding:12px 13px;font-family:inherit;font-size:16px;font-weight:700;
+  }
+  .plan input:focus{outline:none;border-color:var(--green)}
+  .plan .btn{font-size:16px;padding:14px 18px}
+  .formerr{color:var(--red);font-size:13.5px;font-weight:700}
+  .cta{font-size:15.5px;font-weight:700;line-height:1.4}
+  .cta a{color:var(--green-deep);font-weight:800}
+  .cta a:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .planactions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+
+  footer{color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.55;text-align:center}
+  footer .disc{display:block;margin-top:5px;font-style:italic;opacity:.85}
+  @media (prefers-reduced-motion: reduce){.callout,.callout .arrow{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <h1>FREEDOM Calculator</h1>
+    <p class="sub">Plan your path to financial freedom with GoHighLevel</p>
+  </header>
+
+  <!-- STEP 1 -->
+  <section class="band">
+    <div class="bandhead">
+      <span class="steptag"><span class="n"><b>1</b></span> How much</span>
+      <h2 class="htitle">Freedom Number</h2>
+      <button class="toggle" type="button" data-target="body1" aria-expanded="false" aria-controls="body1" aria-label="Show or hide the explanation"><span class="p">+</span><span class="m">&minus;</span></button>
+    </div>
+    <div class="bandbody" id="body1" hidden>
+      <p class="desc"><strong>Escape velocity:</strong> the monthly income that sets you free.</p>
+    </div>
+    <hr class="rule">
+    <div class="bandout">
+      <div class="target">
+        <span class="callout"><svg class="arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 1v9.5M1.8 6.5 6 10.7l4.2-4.2"/></svg> Set your freedom number</span>
+        <select id="target" class="big" aria-label="Your monthly freedom number"></select>
+      </div>
+    </div>
+  </section>
+
+  <!-- COST BUILDER -->
+  <details id="costs">
+    <summary>Build the number from your costs <span class="chev">+</span></summary>
+    <div class="body">
+      <p class="hint" style="margin-bottom:11px">Everyone's fixed costs differ, so nothing here is assumed. Change the lines, then set it as your goal.</p>
+      <div id="costRows"></div>
+      <div class="costtotal">
+        <span class="sum" id="costTotal">$0</span>
+        <button class="btn" type="button" id="useCosts">Use as my goal</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- STEP 2 -->
+  <section class="band">
+    <div class="bandhead">
+      <span class="steptag"><span class="n"><b>2</b></span> How</span>
+      <h2 class="htitle"><span class="wide">Affiliate (40%) or Agency (100%)</span><span class="narrow">Affiliate or Agency</span></h2>
+      <button class="toggle" type="button" data-target="body2" aria-expanded="false" aria-controls="body2" aria-label="Show or hide the options"><span class="p">+</span><span class="m">&minus;</span></button>
+    </div>
+    <div class="bandbody" id="body2" hidden>
+      <select id="mode" aria-label="Affiliate 40% or Agency 100%">
+        <option value="0.4" selected>Affiliate &middot; 40% of the plan</option>
+        <option value="1">Agency &middot; 100%, you bill</option>
+      </select>
+      <p class="flabel" id="priceLabel" style="margin-top:10px">GHL account price (monthly)</p>
+      <select id="planAff" aria-labelledby="priceLabel">
+        <option value="97">Starter &middot; $97 per month</option>
+        <option value="297" selected>Unlimited &middot; $297 per month</option>
+        <option value="497">Pro / SaaS &middot; $497 per month</option>
+      </select>
+      <select id="planAg" aria-labelledby="priceLabel" hidden></select>
+      <p class="note" id="modenote"></p>
+    </div>
+    <hr class="rule">
+    <div class="bandout">
+      <div class="outrow">
+        <span class="lead">That is</span>
+        <span class="num" id="accountsOut">13 ACCOUNTS</span>
+      </div>
+      <p class="extras" id="extras" hidden></p>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="band">
+    <div class="bandhead">
+      <span class="steptag"><span class="n"><b>3</b></span> How long</span>
+      <h2 class="htitle">Your plan</h2>
+      <button class="toggle" type="button" data-target="body3" aria-expanded="false" aria-controls="body3" aria-label="Show or hide the pace"><span class="p">+</span><span class="m">&minus;</span></button>
+    </div>
+    <div class="bandbody" id="body3" hidden>
+      <p class="flabel">New accounts you sign per month</p>
+      <div class="counter">
+        <button type="button" id="pmDown" aria-label="One fewer per month">&minus;</button>
+        <span class="val" id="perMonthOut" role="status" aria-live="polite">1</span>
+        <button type="button" id="pmUp" aria-label="One more per month">+</button>
+        <span class="cap">Be honest, not optimistic.</span>
+      </div>
+    </div>
+    <hr class="rule">
+    <div class="bandout">
+      <div class="outrow">
+        <span class="lead">Then you are</span>
+        <span class="num" id="monthsOut">FREE IN 13 MONTHS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADVANCED -->
+  <details id="adv">
+    <summary>Advanced Settings <span class="chev">+</span></summary>
+    <div class="body adv-body">
+      <div class="field">
+        <label class="flabel" for="onboarding">Onboarding fee, one-time</label>
+        <div class="money"><span>$</span><input id="onboarding" type="number" min="0" max="20000" step="50" value="0" inputmode="numeric"></div>
+        <p class="hint">Off by default. A setup fee is cash today, but it does not recur, and it usually drags an obligation along with it.</p>
+      </div>
+      <div class="field">
+        <label class="flabel" for="churn">Annual churn</label>
+        <input id="churn" type="range" min="0" max="50" step="5" value="0" aria-describedby="churnOut">
+        <p class="hint" id="churnOut"></p>
+      </div>
+      <div class="field">
+        <label class="flabel" for="rateOverride">Commission override</label>
+        <input id="rateOverride" type="range" min="5" max="100" step="5" value="40" aria-describedby="rateOut">
+        <p class="hint" id="rateOut"></p>
+      </div>
+      <div class="field">
+        <span class="flabel">Start over</span>
+        <button class="btn ghost" type="button" id="resetBtn" style="align-self:flex-start">Back to defaults</button>
+        <p class="hint">Clears everything here and puts the goal back to $1,000.</p>
+      </div>
+    </div>
+  </details>
+
+  <!-- THE PLAN: email gate, then PDF -->
+  <section class="plan" id="plan" aria-labelledby="planTitle">
+    <div id="planGate">
+      <form class="planform" id="planForm" novalidate>
+        <h2 id="planTitle">Get your Freedom Plan as a PDF</h2>
+        <p class="hint">Your numbers on one page, ready to print or keep. Tell me where to send the follow-up.</p>
+        <div class="planfields">
+          <div class="field">
+            <label class="flabel" for="leadName">First name</label>
+            <input id="leadName" name="name" type="text" autocomplete="given-name" maxlength="60" required>
+          </div>
+          <div class="field">
+            <label class="flabel" for="leadEmail">Email</label>
+            <input id="leadEmail" name="email" type="email" autocomplete="email" maxlength="120" inputmode="email" required>
+          </div>
+        </div>
+        <p class="formerr" id="formErr" role="alert" hidden></p>
+        <button class="btn" type="submit" id="planSubmit">Download my Freedom Plan (PDF)</button>
+      </form>
+    </div>
+    <div id="planThanks" class="planform" hidden>
+      <h2 id="thanksTitle" tabindex="-1">Your Freedom Plan is ready</h2>
+      <p class="hint" id="thanksMsg" role="status">Check your downloads for the PDF.</p>
+      <p class="cta">Next step: build this plan with a group in my 6-pillar cohort program. <a id="programLink" href="#" target="_blank" rel="noopener">See the program</a></p>
+      <div class="planactions">
+        <button class="btn ghost" type="button" id="planAgain">Download the PDF again</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Using YOUR GoHighLevel affiliate link: 40% commission for the life of the account. OR 100% if you set up a GHL Agency (yes, 100%, very generous from GHL) and handle onboarding, customer service and invoicing yourself.
+    <span class="disc">Not financial advice, just what worked for me.</span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ===== SETTINGS: the two things to edit ===== */
+var WEBHOOK_URL = "";   // GHL inbound webhook. Empty = no POST, the PDF is still delivered.
+var PROGRAM_URL = "https://example.com/6-pillar-cohort";   // placeholder: the 6-pillar cohort program page
+/* ============================================ */
+
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var DEFAULTS = { target:1000, priceAff:297, priceAg:100, rate:0.4, perMonth:1, onboarding:0, churn:0, override:40 };
+  var PM_MAX = 20;
+  var S = Object.assign({}, DEFAULTS);
+
+  var COST_ITEMS = [
+    ["Living costs (rent, food, everything)", 900],
+    ["GoHighLevel", 297],
+    ["Company & admin, monthly", 36],
+    ["Tech & subscriptions", 100]
+  ];
+  var PLAN_NAMES = { 97:"Starter", 297:"Unlimited", 497:"Pro / SaaS" };
+
+  var fmt = function(n){ return "$" + Math.round(n).toLocaleString("en-US"); };
+
+  function save(){ try{ localStorage.setItem("ev_state", JSON.stringify(S)); }catch(e){} }
+  function load(){
+    try{
+      var raw = localStorage.getItem("ev_state");
+      if(raw){ var p = JSON.parse(raw); if(p && typeof p === "object") Object.assign(S, p); }
+    }catch(e){}
+  }
+
+  function targetValues(){
+    var v = [], i;
+    for(i=500;i<=2000;i+=100) v.push(i);
+    for(i=2500;i<=10000;i+=500) v.push(i);
+    return v;
+  }
+  function agencyValues(){
+    var v = [], i;
+    for(i=100;i<=1000;i+=100) v.push(i);
+    return v;
+  }
+  function fillSelect(el, values, fmtFn){
+    el.innerHTML = "";
+    values.forEach(function(v){
+      var o = document.createElement("option");
+      o.value = String(v); o.textContent = fmtFn(v);
+      el.appendChild(o);
+    });
+  }
+  function nearest(values, n){
+    var best = values[0], d = Math.abs(values[0]-n);
+    values.forEach(function(v){ var dd = Math.abs(v-n); if(dd < d){ d = dd; best = v; } });
+    return best;
+  }
+
+  function buildCostRows(){
+    var host = $("costRows");
+    COST_ITEMS.forEach(function(item, i){
+      var row = document.createElement("div");
+      row.className = "costrow";
+      var name = document.createElement("input");
+      name.type = "text"; name.value = item[0]; name.id = "costname" + i;
+      name.setAttribute("aria-label", "Cost item " + (i+1) + " name");
+      var amt = document.createElement("input");
+      amt.type = "number"; amt.min = "0"; amt.step = "1"; amt.value = item[1]; amt.id = "costamt" + i;
+      amt.setAttribute("aria-label", "Cost item " + (i+1) + " amount");
+      amt.addEventListener("input", costTotal);
+      row.appendChild(name); row.appendChild(amt);
+      host.appendChild(row);
+    });
+    costTotal();
+  }
+  function costSum(){
+    var t = 0;
+    for(var i=0;i<COST_ITEMS.length;i++){ var el = $("costamt"+i); if(el) t += (parseFloat(el.value) || 0); }
+    return t;
+  }
+  function costTotal(){ $("costTotal").textContent = fmt(costSum()) + " /mo"; }
+
+  function isAffiliate(){ return S.rate !== 1; }
+  function perAccount(){ return isAffiliate() ? S.priceAff * (S.override/100) : S.priceAg; }
+
+  /* The numbers on screen, as one object. Used by the page, the webhook and the PDF. */
+  function results(){
+    var per = perAccount();
+    var needed = Math.max(1, Math.ceil(S.target / per));
+    var aff = isAffiliate();
+    return {
+      freedomNumber: S.target,
+      model: aff ? "affiliate" : "agency",
+      accountPrice: aff ? S.priceAff : S.priceAg,
+      commissionPercent: aff ? S.override : 100,
+      incomePerAccount: Math.round(per * 100) / 100,
+      accountsNeeded: needed,
+      newAccountsPerMonth: S.perMonth,
+      monthsToFreedom: Math.max(1, Math.ceil(needed / S.perMonth)),
+      annualChurnPercent: S.churn,
+      accountsToReplacePerYear: S.churn > 0 ? Math.ceil(needed * (S.churn/100)) : 0,
+      onboardingFee: S.onboarding,
+      upfrontFees: S.onboarding * needed
+    };
+  }
+
+  function render(){
+    var r = results();
+    var needed = r.accountsNeeded, months = r.monthsToFreedom;
+    var aff = isAffiliate();
+
+    $("accountsOut").textContent = needed + (needed === 1 ? " ACCOUNT" : " ACCOUNTS");
+    $("monthsOut").textContent = "FREE IN " + months + (months === 1 ? " MONTH" : " MONTHS");
+    $("perMonthOut").textContent = S.perMonth;
+
+    $("priceLabel").textContent = aff ? "GHL account price (monthly)" : "What you charge your client (monthly)";
+    $("planAff").hidden = !aff;
+    $("planAg").hidden = aff;
+
+    var bits = [];
+    if(S.churn > 0) bits.push("Replace about " + r.accountsToReplacePerYear + " a year at " + S.churn + "% churn.");
+    if(S.onboarding > 0) bits.push(fmt(r.upfrontFees) + " in upfront fees.");
+    var ex = $("extras");
+    if(bits.length){ ex.textContent = bits.join(" "); ex.hidden = false; } else { ex.hidden = true; }
+
+    $("modenote").innerHTML = aff
+      ? "They open their own account using <strong>your Affiliate link</strong>. No time involvement, no tech hassle, no customer service, no rebilling, nothing. Just money comes in."
+      : "You bill the client directly and keep <strong>100% of the money</strong>. You're fully responsible for this account: you handle the onboarding, the support, the invoicing, everything.";
+
+    save();
+  }
+
+  function syncInputs(){
+    $("target").value = String(S.target);
+    $("planAff").value = String(S.priceAff);
+    $("planAg").value = String(S.priceAg);
+    $("mode").value = String(S.rate);
+    $("onboarding").value = S.onboarding;
+    $("churn").value = S.churn;
+    $("rateOverride").value = S.override;
+    $("churnOut").textContent = S.churn === 0
+      ? "0% · nothing to replace. Accounts do cancel over time, so set this to see how many you replace each year."
+      : S.churn + "% · the share of accounts that cancel within a year.";
+    $("rateOut").textContent = S.override + "% · " + (S.override === 40
+      ? "the standard affiliate rate. Move it only if your deal differs."
+      : "custom rate, applied to the Affiliate option.");
+  }
+
+  var TARGETS = targetValues(), AGENCY = agencyValues();
+  fillSelect($("target"), TARGETS, function(v){ return fmt(v) + " /mo"; });
+  fillSelect($("planAg"), AGENCY, function(v){ return fmt(v) + " per month"; });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".toggle"), function(b){
+    b.addEventListener("click", function(){
+      var open = this.getAttribute("aria-expanded") === "true";
+      this.setAttribute("aria-expanded", open ? "false" : "true");
+      $(this.dataset.target).hidden = open;
+    });
+  });
+
+  $("target").addEventListener("change", function(){ S.target = parseFloat(this.value); render(); });
+  $("mode").addEventListener("change", function(){ S.rate = parseFloat(this.value); render(); });
+  $("planAff").addEventListener("change", function(){ S.priceAff = parseFloat(this.value); render(); });
+  $("planAg").addEventListener("change", function(){ S.priceAg = parseFloat(this.value); render(); });
+
+  function bumpPM(d){
+    S.perMonth = Math.min(PM_MAX, Math.max(1, S.perMonth + d));
+    render();
+  }
+  $("pmUp").addEventListener("click", function(){ bumpPM(1); });
+  $("pmDown").addEventListener("click", function(){ bumpPM(-1); });
+
+  $("onboarding").addEventListener("input", function(){ S.onboarding = Math.max(0, parseFloat(this.value) || 0); render(); });
+  $("churn").addEventListener("input", function(){ S.churn = parseFloat(this.value) || 0; syncInputs(); render(); });
+  $("rateOverride").addEventListener("input", function(){ S.override = parseFloat(this.value) || 40; syncInputs(); render(); });
+  $("useCosts").addEventListener("click", function(){
+    var t = costSum(); if(t <= 0) return;
+    S.target = nearest(TARGETS, t);
+    syncInputs(); render();
+    document.querySelector(".band").scrollIntoView({behavior:"smooth", block:"center"});
+  });
+  $("resetBtn").addEventListener("click", function(){
+    S = Object.assign({}, DEFAULTS); syncInputs(); render();
+  });
+
+  /* ---------- lead capture ---------- */
+  function sendLead(payload){
+    if(!WEBHOOK_URL) return;
+    try{
+      fetch(WEBHOOK_URL, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload), keepalive:true
+      }).catch(function(){
+        /* If the browser blocks the JSON request (CORS), resend as a plain form post. */
+        var flat = new URLSearchParams();
+        flat.append("name", payload.name);
+        flat.append("email", payload.email);
+        flat.append("source", payload.source);
+        Object.keys(payload.results).forEach(function(k){ flat.append(k, String(payload.results[k])); });
+        return fetch(WEBHOOK_URL, { method:"POST", mode:"no-cors", body:flat, keepalive:true });
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  /* ---------- PDF ---------- */
+  /* The built-in PDF font has no accented letters beyond Western Europe, so a name outside that set is drawn as an image. */
+  function textImage(str, px, color){
+    var s = 4, font = "700 " + (px*s) + "px Helvetica, Arial, sans-serif";
+    var c = document.createElement("canvas"), x = c.getContext("2d");
+    x.font = font;
+    c.width = Math.ceil(x.measureText(str).width) + 4;
+    c.height = Math.ceil(px*s*1.4);
+    x = c.getContext("2d");
+    x.font = font; x.fillStyle = color; x.textBaseline = "alphabetic";
+    x.fillText(str, 0, px*s*1.05);
+    return { url:c.toDataURL("image/png"), w:c.width/s, h:c.height/s, base:px*1.05 };
+  }
+
+  function buildPdf(name, r){
+    var doc = new window.jspdf.jsPDF({ unit:"pt", format:"a4" });
+    var W = doc.internal.pageSize.getWidth(), M = 48, CW = W - M*2;
+    var aff = r.model === "affiliate";
+    function ink(){ doc.setTextColor(18,26,22); }
+    function muted(){ doc.setTextColor(85,99,92); }
+    function white(){ doc.setTextColor(255,255,255); }
+
+    /* header band */
+    doc.setFillColor(23,192,91); doc.rect(0, 0, W, 118, "F");
+    white();
+    doc.setFont("helvetica","bold"); doc.setFontSize(11);
+    doc.text("FREEDOM CALCULATOR", M, 42, { charSpace:1 });
+    doc.setFontSize(28); doc.text("Your Freedom Plan", M, 76);
+    doc.setFontSize(12);
+    var pre = "Prepared for ";
+    doc.setFont("helvetica","normal"); doc.text(pre, M, 99);
+    var px = M + doc.getTextWidth(pre);
+    doc.setFont("helvetica","bold");
+    if(/[^\x20-\x7E¡-ÿ]/.test(name)){
+      var img = textImage(name, 12, "#FFFFFF");
+      doc.addImage(img.url, "PNG", px, 99 - img.base, img.w, img.h);
+    } else {
+      doc.text(name, px, 99);
+    }
+    doc.setFont("helvetica","normal");
+    var today = new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" });
+    doc.text(today, W - M, 99, { align:"right" });
+
+    /* the three steps */
+    var y = 140;
+    function step(n, tag, big, small){
+      doc.setFillColor(232,249,239); doc.roundedRect(M, y, CW, 76, 10, 10, "F");
+      doc.setFillColor(23,192,91); doc.circle(M + 26, y + 24, 9, "F");
+      white(); doc.setFont("helvetica","bold"); doc.setFontSize(10);
+      doc.text(String(n), M + 26, y + 27.5, { align:"center" });
+      doc.setTextColor(16,163,75); doc.setFontSize(9.5);
+      doc.text(tag, M + 42, y + 27.5, { charSpace:0.8 });
+      ink(); doc.setFontSize(22);
+      doc.text(big, W - M - 18, y + 33, { align:"right" });
+      muted(); doc.setFont("helvetica","normal"); doc.setFontSize(10.5);
+      doc.text(small, M + 17, y + 58);
+      y += 86;
+    }
+    step(1, "HOW MUCH", fmt(r.freedomNumber) + " per month", "Your Freedom Number: the monthly income that sets you free.");
+    step(2, "HOW", r.accountsNeeded + (r.accountsNeeded === 1 ? " ACCOUNT" : " ACCOUNTS"),
+      aff ? "Affiliate: " + r.commissionPercent + "% of the " + fmt(r.accountPrice) + " plan, about " + fmt(r.incomePerAccount) + " per account each month."
+          : "Agency: you bill " + fmt(r.accountPrice) + " per client each month and keep 100%.");
+    step(3, "HOW LONG", "FREE IN " + r.monthsToFreedom + (r.monthsToFreedom === 1 ? " MONTH" : " MONTHS"),
+      "Signing " + r.newAccountsPerMonth + (r.newAccountsPerMonth === 1 ? " new account" : " new accounts") + " per month.");
+
+    /* inputs table */
+    y += 16;
+    ink(); doc.setFont("helvetica","bold"); doc.setFontSize(13);
+    doc.text("Your numbers", M, y);
+    y += 10;
+    var rows = [
+      ["Freedom Number", fmt(r.freedomNumber) + " per month"],
+      ["Model", aff ? "Affiliate" : "Agency"]
+    ];
+    if(aff){
+      rows.push(["GHL account price", (PLAN_NAMES[r.accountPrice] ? PLAN_NAMES[r.accountPrice] + ", " : "") + fmt(r.accountPrice) + " per month"]);
+      rows.push(["Commission rate", r.commissionPercent + "%"]);
+    } else {
+      rows.push(["What you charge your client", fmt(r.accountPrice) + " per month"]);
+    }
+    rows.push(["Income per account", fmt(r.incomePerAccount) + " per month"]);
+    rows.push(["Accounts needed", String(r.accountsNeeded)]);
+    rows.push(["New accounts you sign per month", String(r.newAccountsPerMonth)]);
+    rows.push(["Months to freedom", String(r.monthsToFreedom)]);
+    if(r.annualChurnPercent > 0) rows.push(["Annual churn", r.annualChurnPercent + "%, replace about " + r.accountsToReplacePerYear + " a year"]);
+    if(r.onboardingFee > 0) rows.push(["Onboarding fee, one-time", fmt(r.onboardingFee) + " each, " + fmt(r.upfrontFees) + " upfront in total"]);
+    doc.setDrawColor(220,227,223); doc.setLineWidth(0.75);
+    doc.setFontSize(10.5);
+    rows.forEach(function(row){
+      y += 21;
+      muted(); doc.setFont("helvetica","normal"); doc.text(row[0], M, y);
+      ink(); doc.setFont("helvetica","bold"); doc.text(row[1], W - M, y, { align:"right" });
+      doc.line(M, y + 7, W - M, y + 7);
+    });
+
+    /* CTA */
+    var H = doc.internal.pageSize.getHeight();
+    var cy = H - 158;
+    doc.setFillColor(23,192,91); doc.roundedRect(M, cy, CW, 74, 10, 10, "F");
+    white(); doc.setFont("helvetica","bold"); doc.setFontSize(13);
+    doc.text("Next step: build this plan with a group in my 6-pillar cohort program.", M + 18, cy + 30);
+    doc.setFontSize(11);
+    doc.textWithLink(PROGRAM_URL, M + 18, cy + 52, { url:PROGRAM_URL });
+    doc.link(M, cy, CW, 74, { url:PROGRAM_URL });
+
+    muted(); doc.setFont("helvetica","italic"); doc.setFontSize(9);
+    doc.text("Not financial advice, just what worked for me.", W / 2, H - 48, { align:"center" });
+    return doc;
+  }
+
+  /* Inside the claude.ai viewer a page cannot start a download itself, so it asks the viewer to save the file. */
+  var viewerDownloads = (window.claude && typeof window.claude.use === "function")
+    ? window.claude.use("downloads").catch(function(){ return null; })
+    : Promise.resolve(null);
+
+  var FILE_NAME = "freedom-plan.pdf";
+  function deliverPdf(name){
+    var msg = $("thanksMsg");
+    if(!window.jspdf || !window.jspdf.jsPDF){
+      msg.textContent = "The PDF tool did not load. Check your connection, reload the page and try again.";
+      return;
+    }
+    var doc;
+    try{ doc = buildPdf(name, results()); }
+    catch(e){ msg.textContent = "The PDF could not be created. Reload the page and try again."; return; }
+    msg.textContent = "Check your downloads for the PDF.";
+    if(!(window.claude && typeof window.claude.use === "function")){ doc.save(FILE_NAME); return; }
+    msg.textContent = "Preparing your PDF.";
+    viewerDownloads.then(function(dl){
+      if(!dl){ doc.save(FILE_NAME); msg.textContent = "Check your downloads for the PDF."; return; }
+      return dl.save({ filename:FILE_NAME, data:doc.output("blob") }).then(function(){
+        msg.textContent = "Check your downloads for the PDF.";
+      }, function(err){
+        msg.textContent = (err && err.code === "declined")
+          ? "Download cancelled. Use the button below to get the PDF."
+          : "The download is not available in this view. Open the page in a browser and try again.";
+      });
+    });
+  }
+
+  var leadName = "";
+  $("programLink").href = PROGRAM_URL;
+  $("planForm").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var name = $("leadName").value.trim(), email = $("leadEmail").value.trim();
+    var err = $("formErr"), problem = "";
+    if(!name) problem = "Enter your first name.";
+    else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) problem = "Enter a valid email address, like name@example.com.";
+    if(problem){
+      err.textContent = problem; err.hidden = false;
+      (name ? $("leadEmail") : $("leadName")).focus();
+      return;
+    }
+    err.hidden = true;
+    leadName = name;
+    sendLead({ name:name, email:email, source:"freedom-calculator", results:results() });
+    $("planGate").hidden = true;
+    $("planThanks").hidden = false;
+    $("thanksTitle").textContent = "Your Freedom Plan is ready, " + name;
+    $("thanksTitle").focus();
+    deliverPdf(name);
+  });
+  $("planAgain").addEventListener("click", function(){ deliverPdf(leadName); });
+
+  load();
+  S.target = nearest(TARGETS, S.target);
+  S.priceAg = nearest(AGENCY, S.priceAg);
+  S.priceAff = nearest([97,297,497], S.priceAff);
+  S.rate = S.rate === 1 ? 1 : 0.4;
+  S.onboarding = Math.max(0, parseFloat(S.onboarding) || 0);
+  S.perMonth = Math.min(PM_MAX, Math.max(1, S.perMonth || 1));
+  buildCostRows();
+  syncInputs();
+  render();
+})();
+</script>
+</body>
+</html>
